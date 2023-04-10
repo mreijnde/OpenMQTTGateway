@@ -39,19 +39,26 @@
 #include <Wire.h>
 
 #include "SSD1306Wire.h"
+#include "config_WebUI.h"
 
 /*-------------------DEFINE LOG LEVEL----------------------*/
 
-#ifndef LOG_LEVEL_LCD
-#  define LOG_LEVEL_LCD LOG_LEVEL_WARNING // Default to only display Warning level messages
+#ifndef LOG_LEVEL_OLED
+#  define LOG_LEVEL_OLED LOG_LEVEL_WARNING // Default to only display Warning level messages
 #endif
 
-#ifndef LOG_TO_LCD
-#  define LOG_TO_LCD false // Default to not display log messages on display
+#ifndef LOG_TO_OLED
+#  define LOG_TO_OLED false // Default to not display log messages on display
 #endif
 
-#ifndef JSON_TO_LCD
-#  define JSON_TO_LCD true // Default to displaying JSON messages on the display
+#ifndef ZwebUI
+#  ifndef JSON_TO_OLED
+#    define JSON_TO_OLED true // Default to displaying JSON messages on the display
+#  endif
+#else
+#  ifndef JSON_TO_OLED
+#    define JSON_TO_OLED false // If WebUI is NOT included within the build, the JSON message parser is not included within the build and the JSON messages are not available for display
+#  endif
 #endif
 
 #ifndef DISPLAY_PAGE_INTERVAL
@@ -62,8 +69,16 @@
 #  define DISPLAY_IDLE_LOGO true // Display the OMG logo when idle
 #endif
 
-#ifndef DISPLAY_METRIC
-#  define DISPLAY_METRIC true // Units used for display of sensor data
+#ifndef DISPLAY_FLIP
+#  define DISPLAY_FLIP true // Flip display orientation
+#endif
+
+#ifndef DISPLAY_STATE
+#  define DISPLAY_STATE true // set to false if you don't want to use the display
+#endif
+
+#ifndef DISPLAY_BRIGHTNESS
+#  define DISPLAY_BRIGHTNESS 50 // 0-100; 50 % brightness as default
 #endif
 
 /*------------------- DEFAULT DISPLAY GEOMETRY ----------------------*/
@@ -87,14 +102,15 @@
 
 /*-------------------DEFINE MQTT TOPIC FOR CONFIG----------------------*/
 
-#define subjectMQTTtoSSD1306set "/commands/MQTTtoSSD1306"
-#define subjectSSD1306toMQTTset "/SSD1306toMQTT"
+#define subjectMQTTtoSSD1306set "/commands/MQTTtoSSD1306/config"
+#define subjectSSD1306toMQTT    "/SSD1306toMQTT"
 
 /*-------------------EXTERNAL FUNCTIONS----------------------*/
 
 extern void setupSSD1306();
 extern void loopSSD1306();
 extern void MQTTtoSSD1306(char*, JsonObject&);
+extern String stateSSD1306Display();
 
 // Simple construct for displaying message in lcd and oled displays
 
@@ -106,39 +122,16 @@ void ssd1306Print(char*, char*, char*);
 void ssd1306Print(char*, char*);
 void ssd1306Print(char*);
 
-#define pubOled(...) ssd1306PubPrint(__VA_ARGS__)
-void ssd1306PubPrint(const char*, JsonObject&);
-
-// Structure for queueing OMG messages to the display
-
-/*
-Structure for queueing OMG messages to the display.
-Length of each line is OLED_TEXT_WIDTH
-- title
-- line1
-- line2
-- line3
-- line4
-*/
-struct displayQueueMessage {
-  char title[OLED_TEXT_WIDTH];
-  char line1[OLED_TEXT_WIDTH];
-  char line2[OLED_TEXT_WIDTH];
-  char line3[OLED_TEXT_WIDTH];
-  char line4[OLED_TEXT_WIDTH];
-};
+/*-------------------End of Global Variables----------------------*/
 
 // This pattern was borrowed from HardwareSerial and modified to support the ssd1306 display
 
 class OledSerial : public Stream {
-private:
-  void ssd1306Intro(int scale, int displayWidth, int displayHeight);
-
 public:
   OledSerial(int);
   void begin();
-  void drawLogo(int logoSize, int circle1X, int circle1Y, bool circle1, bool circle2, bool circle3, bool line1, bool line2, bool name);
-  boolean displayPage(displayQueueMessage*);
+  void drawLogo(int xshift, int yshift);
+  boolean displayPage(webUIQueueMessage*);
 
   SSD1306Wire* display;
 
@@ -179,23 +172,5 @@ protected:
 };
 
 extern OledSerial Oled;
-
-/*------------------- Unit Conversion Functions ----------------------*/
-
-#define convert_kmph2mph(kmph) (kmph * (1.0f / 1.609344f))
-
-#define convert_mph2kmph(mph) (mph * 1.609344f)
-
-#define convert_mm2inch(mm) (mm * 0.039370f)
-
-#define convert_inch2mm(inch) (inch * 25.4f)
-
-#define convert_kpa2psi(kpa) (kpa * (1.0f / 6.89475729f))
-
-#define convert_psi2kpa(psi) (psi * 6.89475729f)
-
-#define convert_hpa2inhg(hpa) (hpa * (1.0f / 33.8639f))
-
-#define convert_inhg2hpa(inhg) (inhg * 33.8639f)
 
 #endif

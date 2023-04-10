@@ -238,6 +238,14 @@ CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
 #    ifndef MQTT_HTTPS_FW_UPDATE_USE_PASSWORD
 #      define MQTT_HTTPS_FW_UPDATE_USE_PASSWORD 1 // Set this to 0 if not using TLS connection to MQTT broker to prevent clear text passwords being sent.
 #    endif
+#    if DEVELOPMENTOTA
+#      define OTA_JSON_URL "https://github.com/1technophile/OpenMQTTGateway/raw/gh-pages/dev/firmware_build/latest_version_dev.json" //OTA url used to discover new versions of the firmware from development nightly builds
+#    else
+#      define OTA_JSON_URL "https://github.com/1technophile/OpenMQTTGateway/raw/gh-pages/firmware_build/latest_version.json" //OTA url used to discover new versions of the firmware
+#    endif
+#    define ENTITY_PICTURE   "https://github.com/1technophile/OpenMQTTGateway/raw/development/docs/img/Openmqttgateway_logo_mini_margins.png"
+#    define RELEASE_LINK_DEV "https://github.com/1technophile/OpenMQTTGateway/raw/gh-pages/dev/firmware_build/"
+#    define RELEASE_LINK     "https://github.com/1technophile/OpenMQTTGateway/releases/download/"
 #  endif
 
 #  ifndef MQTT_SECURE_SELF_SIGNED
@@ -286,13 +294,24 @@ static_assert(MQTT_SECURE_SELF_SIGNED_INDEX_DEFAULT < (sizeof(certs_array) / siz
 #  endif
 #endif
 
+/**
+ * Deep-sleep for the ESP8266.
+ * Set the wake pin.
+ */
+#ifdef ESP8266_DEEP_SLEEP_IN_US
+#  ifndef ESP8266_DEEP_SLEEP_WAKE_PIN
+#    define ESP8266_DEEP_SLEEP_WAKE_PIN D0
+#  endif
+#endif
+
 /*------------------DEEP SLEEP parameters ------------------*/
+//DEFAULT_LOW_POWER_MODE -1 to normal mode, low power mode can't be used on this build
 //DEFAULT_LOW_POWER_MODE 0 to normal mode (no power consumption optimisations)
 //DEFAULT_LOW_POWER_MODE 1 to activate deep sleep
 //DEFAULT_LOW_POWER_MODE 2 to activate deep sleep (LCD is turned OFF)
 #ifdef ESP32
 #  ifndef DEFAULT_LOW_POWER_MODE
-#    define DEFAULT_LOW_POWER_MODE 0
+#    define DEFAULT_LOW_POWER_MODE -1
 #  endif
 int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #endif
@@ -317,6 +336,8 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 //#define ZsensorHCSR501 "HCSR501"  //ESP8266, Arduino, ESP32,  Sonoff RF Bridge
 //#define ZsensorADC     "ADC"      //ESP8266, Arduino, ESP32
 //#define ZsensorBH1750  "BH1750"   //ESP8266, Arduino, ESP32
+//#define ZsensorMQ2 "MQ2"  //ESP8266, Arduino, ESP32
+//#define ZsensorTEMT6000 "TEMT6000"  //ESP8266
 //#define ZsensorTSL2561 "TSL2561"  //ESP8266, Arduino, ESP32
 //#define ZsensorBME280  "BME280"   //ESP8266, Arduino, ESP32
 //#define ZsensorHTU21   "HTU21"    //ESP8266, Arduino, ESP32
@@ -350,6 +371,9 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #ifndef will_Retain
 #  define will_Retain true
 #endif
+#ifndef sensor_Retain
+#  define sensor_Retain false
+#endif
 #ifndef will_Message
 #  define will_Message "offline"
 #endif
@@ -373,6 +397,12 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 // home/OpenMQTTGateway_ESP32_DEVKIT/BTtoMQTT/4XXXXXXXXXX4/servicedata fe0000000000000000000000000000000000000000
 #ifndef simpleReceiving
 #  define simpleReceiving true //define false if you don't want to use old way reception analysis
+#endif
+#ifndef message_UTCtimestamp
+#  define message_UTCtimestamp false //define true if you want messages to be timestamped in ISO8601 UTC format (e.g.: "UTCtime"="2023-12-26T19:10:20Z")
+#endif
+#ifndef message_unixtimestamp
+#  define message_unixtimestamp false //define true if you want messages to have an unix timestamp (e.g.: "unixtime"=1679015107)
 #endif
 
 /*-------------DEFINE YOUR OTA PARAMETERS BELOW----------------*/
@@ -398,13 +428,13 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 /*-------------DEFINE PINs FOR STATUS LEDs----------------*/
 #  ifndef LED_SEND_RECEIVE
 #    ifdef ESP8266
-#      define LED_SEND_RECEIVE 40
+//#      define LED_SEND_RECEIVE 40
 #    elif ESP32
-#      define LED_SEND_RECEIVE 40
+//#      define LED_SEND_RECEIVE 40
 #    elif __AVR_ATmega2560__ //arduino mega
-#      define LED_SEND_RECEIVE 40
+//#      define LED_SEND_RECEIVE 40
 #    else //arduino uno/nano
-#      define LED_SEND_RECEIVE 40
+//#      define LED_SEND_RECEIVE 40
 #    endif
 #  endif
 #  ifndef LED_SEND_RECEIVE_ON
@@ -412,13 +442,13 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #  endif
 #  ifndef LED_ERROR
 #    ifdef ESP8266
-#      define LED_ERROR 42
+//#      define LED_ERROR 42
 #    elif ESP32
-#      define LED_ERROR 42
+//#      define LED_ERROR 42
 #    elif __AVR_ATmega2560__ //arduino mega
-#      define LED_ERROR 42
+//#      define LED_ERROR 42
 #    else //arduino uno/nano
-#      define LED_ERROR 42
+//#      define LED_ERROR 42
 #    endif
 #  endif
 #  ifndef LED_ERROR_ON
@@ -426,35 +456,66 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #  endif
 #  ifndef LED_INFO
 #    ifdef ESP8266
-#      define LED_INFO 44
+//#      define LED_INFO 44
 #    elif ESP32
-#      define LED_INFO 44
+//#      define LED_INFO 44
 #    elif __AVR_ATmega2560__ //arduino mega
-#      define LED_INFO 44
+//#      define LED_INFO 44
 #    else //arduino uno/nano
-#      define LED_INFO 44
+//#      define LED_INFO 44
 #    endif
 #  endif
 #  ifndef LED_INFO_ON
 #    define LED_INFO_ON HIGH
 #  endif
-#  define SetupIndicators()            \
-    pinMode(LED_SEND_RECEIVE, OUTPUT); \
-    pinMode(LED_INFO, OUTPUT);         \
-    pinMode(LED_ERROR, OUTPUT);        \
-    SendReceiveIndicatorOFF();         \
-    InfoIndicatorOFF();                \
-    ErrorIndicatorOFF();
 
-#  define ErrorIndicatorON()        digitalWrite(LED_ERROR, LED_ERROR_ON)
-#  define ErrorIndicatorOFF()       digitalWrite(LED_ERROR, !LED_ERROR_ON)
-#  define SendReceiveIndicatorON()  digitalWrite(LED_SEND_RECEIVE, LED_SEND_RECEIVE_ON)
-#  define SendReceiveIndicatorOFF() digitalWrite(LED_SEND_RECEIVE, !LED_SEND_RECEIVE_ON)
-#  define InfoIndicatorON()         digitalWrite(LED_INFO, LED_INFO_ON)
-#  define InfoIndicatorOFF()        digitalWrite(LED_INFO, !LED_INFO_ON)
+#  ifdef LED_ERROR
+#    define SetupIndicatorError() \
+      pinMode(LED_ERROR, OUTPUT); \
+      ErrorIndicatorOFF();
+#    define ErrorIndicatorON()  digitalWrite(LED_ERROR, LED_ERROR_ON)
+#    define ErrorIndicatorOFF() digitalWrite(LED_ERROR, !LED_ERROR_ON)
+#  else
+#    define SetupIndicatorError()
+#    define ErrorIndicatorON()
+#    define ErrorIndicatorOFF()
+#  endif
+#  ifdef LED_SEND_RECEIVE
+#    define SetupIndicatorSendReceive()  \
+      pinMode(LED_SEND_RECEIVE, OUTPUT); \
+      SendReceiveIndicatorOFF();
+#    define SendReceiveIndicatorON()  digitalWrite(LED_SEND_RECEIVE, LED_SEND_RECEIVE_ON)
+#    define SendReceiveIndicatorOFF() digitalWrite(LED_SEND_RECEIVE, !LED_SEND_RECEIVE_ON)
+#  else
+#    define SetupIndicatorSendReceive()
+#    define SendReceiveIndicatorON()
+#    define SendReceiveIndicatorOFF()
+#  endif
+#  ifdef LED_INFO
+#    define SetupIndicatorInfo() \
+      pinMode(LED_INFO, OUTPUT); \
+      InfoIndicatorOFF();
+#    define InfoIndicatorON()  digitalWrite(LED_INFO, LED_INFO_ON)
+#    define InfoIndicatorOFF() digitalWrite(LED_INFO, !LED_INFO_ON)
+#  else
+#    define SetupIndicatorInfo()
+#    define InfoIndicatorON()
+#    define InfoIndicatorOFF()
+#  endif
+#  define CriticalIndicatorON() // Not used
+#  define CriticalIndicatorON() // Not used
+#  define PowerIndicatorON()    // Not used
+#  define PowerIndicatorOFF()   // Not used
+#  define SetupIndicators()     // Not used
 #else // Management of Errors, reception/emission and informations indicators with RGB LED
+#  if !defined(CONFIG_IDF_TARGET_ESP32S3) && !defined(CONFIG_IDF_TARGET_ESP32C3) //I2S not available yet with Fastled on S3 and C3
+#    define FASTLED_ESP32_I2S // To avoid ESP32 instabilities https://github.com/FastLED/FastLED/issues/1438
+#  endif
 #  include <FastLED.h>
 CRGB leds[FASTLED_IND_NUM_LEDS];
+#  ifdef FASTLED_IND_DATA_GPIO2 // Only used for Critical Indicator
+CRGB leds2[FASTLED_IND_NUM_LEDS];
+#  endif
 #  ifndef RGB_LED_POWER
 #    define RGB_LED_POWER -1 // If the RGB Led is linked to GPIO pin for power define it here
 #  endif
@@ -471,12 +532,24 @@ CRGB leds[FASTLED_IND_NUM_LEDS];
 #  ifndef FASTLED_ERROR_LED
 #    define FASTLED_ERROR_LED 0 // First Led
 #  endif
+#  ifndef FASTLED_CRITICAL_LED
+#    define FASTLED_CRITICAL_LED 0 // First Led
+#  endif
 
-#  define SetupIndicators()                                                               \
-    pinMode(RGB_LED_POWER, OUTPUT);                                                       \
-    digitalWrite(RGB_LED_POWER, HIGH);                                                    \
-    FastLED.addLeds<FASTLED_IND_TYPE, FASTLED_IND_DATA_GPIO>(leds, FASTLED_IND_NUM_LEDS); \
-    FastLED.setBrightness(FASTLED_BRIGHTNESS);
+#  ifndef FASTLED_IND_DATA_GPIO2
+#    define SetupIndicators()                                                               \
+      pinMode(RGB_LED_POWER, OUTPUT);                                                       \
+      digitalWrite(RGB_LED_POWER, HIGH);                                                    \
+      FastLED.addLeds<FASTLED_IND_TYPE, FASTLED_IND_DATA_GPIO>(leds, FASTLED_IND_NUM_LEDS); \
+      FastLED.setBrightness(FASTLED_BRIGHTNESS)
+#  else
+#    define SetupIndicators()                                                                 \
+      pinMode(RGB_LED_POWER, OUTPUT);                                                         \
+      digitalWrite(RGB_LED_POWER, HIGH);                                                      \
+      FastLED.addLeds<FASTLED_IND_TYPE, FASTLED_IND_DATA_GPIO>(leds, FASTLED_IND_NUM_LEDS);   \
+      FastLED.addLeds<FASTLED_IND_TYPE, FASTLED_IND_DATA_GPIO2>(leds2, FASTLED_IND_NUM_LEDS); \
+      FastLED.setBrightness(FASTLED_BRIGHTNESS)
+#  endif
 #  define ErrorIndicatorON()                \
     leds[FASTLED_ERROR_LED] = CRGB::Orange; \
     FastLED.show()
@@ -495,6 +568,22 @@ CRGB leds[FASTLED_IND_NUM_LEDS];
 #  define InfoIndicatorOFF()              \
     leds[FASTLED_INFO_LED] = CRGB::Black; \
     FastLED.show()
+#  ifdef FASTLED_IND_DATA_GPIO2 // Used for relay power indicator
+// For the critical ON indicator there is no method to turn it off, the only way is to unplug the device
+// This enable to have persistence of the indicator to inform the user
+#    define CriticalIndicatorON()          \
+      leds2[FASTLED_INFO_LED] = CRGB::Red; \
+      FastLED.show()
+#    define PowerIndicatorON()               \
+      leds2[FASTLED_INFO_LED] = CRGB::Green; \
+      FastLED.show()
+#    define PowerIndicatorOFF()              \
+      leds2[FASTLED_INFO_LED] = CRGB::Black; \
+      FastLED.show()
+#  endif
+#  define SetupIndicatorInfo()
+#  define SetupIndicatorSendReceive()
+#  define SetupIndicatorError()
 #endif
 
 #ifdef ESP8266
@@ -522,7 +611,6 @@ CRGB leds[FASTLED_IND_NUM_LEDS];
 #define subjectMQTTtoX     "/commands/#"
 #define subjectMultiGTWKey "toMQTT"
 #define subjectGTWSendKey  "MQTTto"
-#define subjectFWUpdate    "firmware_update"
 
 // key used for launching commands to the gateway
 #define restartCmd "restart"
@@ -559,20 +647,88 @@ CRGB leds[FASTLED_IND_NUM_LEDS];
 #endif
 
 #define TimeBetweenReadingSYS        120 // time between (s) system readings (like memory)
+#define TimeBetweenCheckingSYS       3600 // time between (s) system checkings (like updates)
 #define TimeLedON                    1 // time LED are ON
 #define InitialMQTTConnectionTimeout 10 // time estimated (s) before the board is connected to MQTT
-#define subjectSYStoMQTT             "/SYStoMQTT"
+#define subjectSYStoMQTT             "/SYStoMQTT" // system parameters
+#define subjectRLStoMQTT             "/RLStoMQTT" // latest release information
 #define subjectMQTTtoSYSset          "/commands/MQTTtoSYS/config"
-
+#define subjectMQTTtoSYSupdate       "/commands/MQTTtoSYS/firmware_update"
+#define TimeToResetAtStart           5000 // Time we allow the user at start for the reset command by button press
 /*-------------------DEFINE LOG LEVEL----------------------*/
 #ifndef LOG_LEVEL
 #  define LOG_LEVEL LOG_LEVEL_NOTICE
 #endif
+
+/*-------------------ESP32 Wifi band and tx power ---------------------*/
+//Certain sensors are sensitive to ESP32 Wifi which can cause interference with their normal operation
+//For example it can cause false triggers on a PIR HC-SR501
+//It is reccomended to change Wifi BAND to G and reduce tx power level to 11dBm
+//Since the WiFi protocol is persisted in the flash of the ESP32 you have to run at least once with `WiFiGMode` defined false to get Band N back.
+#ifdef ESP32
+#  ifndef WifiGMode
+//#    define WifiGMode                 true
+#  endif
+#  ifndef WifiPower
+//#    define WifiPower                 WIFI_POWER_11dBm
+#  endif
+#endif
+
+/*-----------PLACEHOLDERS FOR WebUI DISPLAY--------------*/
+#define pubWebUI(...) // display the published message onto the OLED display
 
 /*-----------PLACEHOLDERS FOR OLED/LCD DISPLAY--------------*/
 // The real definitions are in config_M5.h / config_SSD1306.h
 #define pubOled(...)        // display the published message onto the OLED display
 #define displayPrint(...)   // only print if not in low power mode
 #define lpDisplayPrint(...) // print in low power mode
+
+/*----------- SHARED WITH OMG MODULES --------------*/
+
+char mqtt_topic[parameters_size + 1] = Base_Topic;
+char gateway_name[parameters_size + 1] = Gateway_Name;
+
+void connectMQTT();
+#ifndef ESPWifiManualSetup
+void saveMqttConfig();
+#endif
+
+unsigned long uptime();
+bool cmpToMainTopic(const char*, const char*);
+void pub(const char*, const char*, bool);
+// void pub(const char*, JsonObject&);
+void pub(const char*, const char*);
+// void pub_custom_topic(const char*, JsonObject&, boolean);
+
+#if defined(ESP32)
+#  include <Preferences.h>
+Preferences preferences;
+#endif
+
+#ifdef ZmqttDiscovery
+bool disc = true; // Auto discovery with Home Assistant convention
+unsigned long lastDiscovery = 0; // Time of the last discovery to trigger automaticaly to off after DiscoveryAutoOffTimer
+#endif
+
+#if defined(ESP8266) || defined(ESP32)
+#  include <vector>
+// Flags definition for white list, black list, discovery management
+#  define device_flags_init     0 << 0
+#  define device_flags_isDisc   1 << 0
+#  define device_flags_isWhiteL 1 << 1
+#  define device_flags_isBlackL 1 << 2
+#  define device_flags_connect  1 << 3
+#  define isWhite(device)       device->isWhtL
+#  define isBlack(device)       device->isBlkL
+#  define isDiscovered(device)  device->isDisc
+#endif
+
+#if defined(ZgatewayRF) || defined(ZgatewayIR) || defined(ZgatewaySRFB) || defined(ZgatewayWeatherStation) || defined(ZgatewayRTL_433)
+bool isAduplicateSignal(SIGNAL_SIZE_UL_ULL);
+void storeSignalValue(SIGNAL_SIZE_UL_ULL);
+#endif
+
+#define convertTemp_CtoF(c) ((c * 1.8) + 32)
+#define convertTemp_FtoC(f) ((f - 32) * 5 / 9)
 
 #endif

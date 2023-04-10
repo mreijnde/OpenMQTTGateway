@@ -1,69 +1,56 @@
 # BLE gateway
 
-::: warning
-We strongly encourage the use of a white-list (see below) so as to collect data from your devices only and not from other MAC addresses.
-By default the gateway scans the advertizing BLE devices nearby with their MAC addresses. Depending on your country, it may be illegal to monitor networks for MAC addresses, especially on networks that you do not own. Please check your country's laws (for US Section 18 U.S. Code § 2511) - [discussion here](https://github.com/schollz/howmanypeoplearearound/issues/4).
-:::
+The manufacturer agnostic BLE gateway acts as a powerful BLE scanner of devices and decoder, allowing you to visualize and analyze information from a wide range of BLE devices. 
+It can also act as a presence detection gateway by reading the nearby BLE tags or tracker devices.
 
-## Receiving signals from BLE beacon devices for Presence detection
+Data are transmitted to an MQTT broker, where it can be used to trigger events and rules, as well as displayed, stored and processed in your favorite controller. 
 
-Subscribe to all the messages with mosquitto or open your MQTT client software:
+With the ability to monitor and analyze data such as temperature, humidity, moisture, luminance, weight, pressure, fine particles, and more, the BLE gateway provides a flexible and customizable solution for integrating BLE technology into your control and monitoring systems.
 
-`    sudo mosquitto_sub -t +/# -v`
+![](../img/OpenMQTTGateway-sensors-ble.png)
 
-_NOTE: HM-10 or HM-11 module needed if you are not using ESP32; configure in `User_config.h`_
 
-The BT gateway module for OpenMQTTGateway enables the detection of BLE beacons and their signal strength.  Generally BLE devices will not broadcast if they are paired so you may need to ensure your beacons is unpaired before it will be seen by the gateway.
+## Receiving signals from [compatible BLE sensors](https://decoder.theengs.io/devices/devices_by_brand.html) to publish it to an MQTT broker.
+To receive data from BLE sensors you can use an ESP32-based device with a programming USB port or use a Serial adapter.
 
-If beacons are detected the gateway will periodically publish messages to MQTT (beacons must not be paired, see above):
+OpenMQTTGateway is also available preloaded and configured with the [Theengs plug](https://shop.theengs.io/products/theengs-plug-smart-plug-ble-gateway-and-energy-consumption), a smart plug that acts as a BLE gateway and energy monitoring device.
 
-```
-home/OpenMQTTGateway/BTtoMQTT/45E174126E00 {"id":"45:e1:74:12:6e:00","rssi":-89,"distance":21.51847,"servicedata":"fe0000000000000000000000000000000000000000"}
-```
-```
-home/OpenMQTTGateway/BTtoMQTT/C7FaaD132C00 {"id":"c7:fa:ad:13:2c:00","rssi":-68,"distance":2.799256,"servicedata":"drfgdrgdsrgesrdgdrgdregesrgtrhtyhtfyhdtyhh"}
-```
+1. Follow the [Upload](../upload/web-install.md) and [Configuration](../upload/portal.md) steps.
 
-The subtopic after `home/BTtoMQTT/` is the MAC address of the Bluetooth low energy beacon.  The rssi value is the [RSSI signal level](https://www.metageek.com/training/resources/understanding-rssi.html) from which you may deduce the relative distance to the device.
-Consider the distance as a beta feature as currently we are not retrieving the emitting power of the beacon to make it more accurate.
+1. Download an MQTT client like MQTT explorer.
+
+1. You should see data coming in your broker.
+
+![](../img/OpenMQTTGateway-mqtt-explorer-lywsd03mmc-atc.png)
+
+Once the data has been transmitted to the MQTT broker, it can be easily integrated with your preferred controller. For example, the data can be automatically discovered and made available within popular controllers, example below with Home Assistant.
+
+![](../img/OpenMQTTGateway-home-assistant-chart.png)
+
+Examples of compatible sensors among [our list](https://decoder.theengs.io/devices/devices_by_brand.html: Mi Flora, Mi jia, LYWDS02, LYWSD03MMC, ClearGrass, Mi scale, iBBQ, TPMS
+
+## Receiving signals from BLE tracker devices for Presence detection
+The gateway can detect the BLE trackers from Tile, NUT, TAGIT, ITAG, MiBand, Amazfit and RuuviTag and create automaticaly a device tracker entity following the Home Assistant discovery convention (if the auto discovery is activated).
+To do this activate the "BT: Publish HASS presence" switch in your controller or send the followng MQTT command to your broker:
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"hasspresence":true}'`
+
+The entity created can be attached to a person to leverage presence detection. The `away` or `not home` state is triggered if the BLE tracker is not detected during the timer defined by `presenceawaytimer`.
+
+![](../img/OpenMQTTGateway-BLE-tracker-Home-Assistant.png)
+
+If you have multiple gateways, your BLE trackers may not be detected temporary by one gateway but still by the others. In this case you will see the tracker appears offline briefly and online again once it is detected by the others gateways.
+
+By default `presenceawaytimer` is set to 120s, you can change it from the slider in your controller or with the following command (ms)
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"presenceawaytimer":66000}'`
+
+Generally BLE devices will not broadcast if they are paired so you may need to ensure your beacons is unpaired/disconnected before it will be seen by the gateway.
+
+Consider the distance estimation as a beta feature.
 
 Note that you can find apps to simulate beacons and do some tests like [Beacon simulator](https://play.google.com/store/apps/details?id=net.alea.beaconsimulator)
 
 iOS version >=10 devices advertise without an extra app MAC address, nevertheless this address [changes randomly](https://github.com/1technophile/OpenMQTTGateway/issues/71) and cannot be used for presence detection. You must install an app to advertise a fixed MAC address.
-
-
-## Receiving signals from BLE devices Mi Flora, Mi jia, LYWDS02, LYWSD03MMC, ClearGrass, Mi scale and [many more](https://compatible.openmqttgateway.com/index.php/devices/ble-devices/)
-So as to receive BLE sensors data you need a simple ESP32
-The mi flora supported firmware is >3.1.8
-
-Verify that your sensor is working with the App and update it with the last software version.
-You should see in your MQTT broker the following data:
-![](../img/OpenMQTTgateway_miflora_results.png)
-
-Note that the gateway return one or two measurement value each time. The different measures depending on the devices are:
-* Lux
-* Temperature
-* Moisture
-* Fertilization
-* Humidity
-* Pressure
-* Steps
-* Weight
-* Impedance
-* Battery
-* Voltage
-* Open
-* Presence
-
-The infos will appear like this on your MQTT broker:
-
-`home/OpenMQTTGateway/BTtoMQTT/4C33A6603C79 {"hum":"52.6","tempc":"19.2","tempf":"66.56"}`
-
-More info are available on [my blog](https://1technophile.blogspot.fr/2017/11/mi-flora-integration-to-openmqttgateway.html) 
-
-::: tip
-OpenMQTTGateway publish the servicedata field of your BLE devices.
-:::
 
 ## Setting a white or black list
 A black list is a list of MAC addresses that will never be published by OMG
@@ -113,16 +100,14 @@ If you want to scan continuously for BLE devices, for example for beacon locatio
 In this case you should deactivate the BLE connection mechanism to avoid concurrency between scan and connections (see chapter below, bleconnect).
 
 ::: tip
-For certain devices like LYWSD03MMC OpenMQTTGateway use a connection (due to the fact that the advertized data are encrypted), this connection mechanism is launched after every `ScanBeforeConnect` per default, you can modify it by following the procedure below.
+For certain devices like LYWSD03MMC OpenMQTTGateway use a connection (due to the fact that the advertized data are encrypted), this connection mechanism is launched after every `TimeBtwConnect` per default, you can modify it by following the procedure below.
 :::
 
-## Setting the number of scans between connection attempts
+## Setting the time between connection attempts
 
-If you want to change the number of BLE scans that are done before a BLE connect you can change it by MQTT, if you want the BLE connect to be every 30 scans:
+If you want to change the time between BLE connect you can change it by MQTT, if you want the BLE connect time to be every 300s:
 
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"scanbcnct":30}'`
-
-The BLE connect will be done every 30 * (`TimeBtwRead` + `Scan_duration`), 30 * (55000 + 10000) = 1950000ms
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"intervalcnct":300000}'`
 
 ## Setting if the gateway publishes all the BLE devices scanned or only the detected sensors (default: false)
 
@@ -136,17 +121,55 @@ With Home Assistant, this command is directly available through MQTT auto discov
 
 The gateway will publish only the detected sensors like Mi Flora, Mi jia, LYWSD03MMC... and not the other BLE devices. This is useful if you don't use the gateway for presence detection but only to retrieve sensors data.
 
-## Setting if the gateway use active or passive scanning
+## Setting if the gateway publishes known devices which randomly change their MAC address
+
+The default is false, as such changing MAC addresses cannot be related to specific devices.
+
+If you want to change this characteristic:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"randommacs":true}'`
+
+## Setting if the gateway use adaptive scanning
+
+Adaptive scanning lets the gateway decide for you the best passive `interval` and active `intervalacts` scan interval, depending on the characteristics of your devices.
+The gateway retrieves your devices' information from [Theengs Decoder](https://decoder.theengs.io) and adapts its parameters accordingly if a device that requires it is detected.
+For example a door or a PIR sensor will require continuous scanning, so if detected the gateway is going to reduce its time between scans to the minimum. Or your devices may also require active scanning to retrieve data, in this case the gateway will also trigger active scans at regular intervals.
 
 If you want to change this characteristic (default:true):
 
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"activescan":false}'`
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"adaptivescan":false}'`
+
+Setting Adaptive scanning to `false` will automatically put the gateway to continuous active scanning if no additional manual changes have already been applied.
 
 ::: tip
 With Home Assistant, this command is directly available through MQTT auto discovery as a switch into the HASS OpenMQTTGateway device entities list.
 :::
 
-If false, the gateway will only do a passive scanning (not request for sensor broadcasts), some sensors may not advertize their data with passive scanning.
+An overview with background information to better understand the different setting used:
+
+**Passive scanning:** With this scanning mode the gateway picks up any freely available broadcasts sent out by devices, without any interaction with the devices. The interval for this is set with [{"interval":66000}](#setting-the-time-between-ble-scans-and-force-a-scan)
+
+**Active scanning:** With this scanning mode the gateway sends out requests for sensor broadcasts first, before then picking up the broadcast advertisement data. Some devices require this request before they send out all data in their broadcasts. The interval for this active scanning with request first is set by [{"intervalacts":300000}](#setting-the-time-between-active-scanning)
+
+If adaptive scanning is set to false and you want to manually set these intervals, setting [Publishing advertisement and advanced data](#advanced-publishing-advertisement-and-advanced-data-default-false) to true will show you additional data about which of your devices require active scanning and/or continuous scanning, so that you can tune these setting to your devices and your individual requirements of their data.
+
+**"cont":true** - the device requires continuous scanning. If passive ({"interval":100}) or active ({"intervalacts":100}) depends on the additional device specification.
+
+**"acts":true** - the device requires active scanning to broadcast all of it's data for decoding.
+
+## Setting the time between active scanning
+
+If you have passive scanning activated, but also have some devices which require active scanning, this defines the time interval between two intermittent active scans.
+
+If you want to change the time between active scans you can change it by MQTT. For setting the active scan interval time to every 5 minutes:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"intervalacts":300000}'`
+
+## Setting the duration of a scan
+
+If you want to change the default 10 sec duration of each scan cycle to 5 seconds
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"scanduration":5000}'`
 
 ## Setting if the gateway connects to BLE devices eligibles on ESP32
 
@@ -211,43 +234,6 @@ you can also accept all the devices by the following command:
 `mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"minrssi":-200}'`
 
 The default value is set into config_BT.h
-
-## ADVANCED: Setting up an external decoder
-
-This advanced option is used to publish raw radio frames on a specific topic to be decoded by an external decoder instead of the integrated one.
-
-To enable external decoder:
-
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"extDecoderEnable":true}'`
-
-To change the default external decoder topic to "undecoded":
-
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"extDecoderTopic":"undecoded"}'`
-
-## ADVANCED: Filtering out connectable devices
-
-[With OpenHAB integration](../integrate/openhab2.md), this configuration is highly recommended, otherwise you may encounter incomplete data.
-
-If you want to enable this feature:
-
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"filterConnectable":true}'`
-
-## ADVANCED: Publishing advertisement data (default: false)
-
-If you want to enable this feature:
-
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"pubadvdata":true}'`
-
-This will publish extensive information about the device:
-```json
-{"id":"11:22:33:44:55:66","mac_type":0,"adv_type":0,"name":"Qingping Motion & Light","rssi":-93,"servicedata":"88121122334455660201520f0126090403000000","servicedatauuid":"0xfdcd","brand":"Qingping","model":"Motion & Light","model_id":"CGPR1","lux":3,"batt":82}
-```
-
-## ADVANCED: Not publishing advertisement data
-
-To stop publishing advertisement data:
-
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"pubadvdata":false}'`
 
 ## Store BLE configuration into the gateway
 
@@ -332,7 +318,9 @@ The `ttl` parameter is the number of attempts to connect (defaults to 1), which 
 
 SwitchBot Bot devices are automatically discovered and available as a device in the configuration menu of home assistant.
 
-::: tip If the SwitchBot mode is changed the ESP32 must be restarted. :::
+::: tip 
+If the SwitchBot mode is changed the ESP32 must be restarted. 
+:::
 
 The device can also be controlled over MQTT with a simplified BLE write command.
 
@@ -350,3 +338,47 @@ Response (assuming success):
   "state":"on"
 }
 ```
+
+## ADVANCED: Setting up an external decoder
+
+This advanced option is used to publish raw radio frames on a specific topic to be decoded by an external decoder instead of the integrated one.
+
+To enable external decoder:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"extDecoderEnable":true}'`
+
+To change the default external decoder topic to "undecoded":
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"extDecoderTopic":"undecoded"}'`
+
+## ADVANCED: Filtering out connectable devices
+
+[With OpenHAB integration](../integrate/openhab2.md), this configuration is highly recommended, otherwise you may encounter incomplete data.
+
+If you want to enable this feature:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"filterConnectable":true}'`
+
+## ADVANCED: Advertisement and advanced data (default: false)
+
+If you want to enable this feature:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"pubadvdata":true}'`
+
+This will publish extensive information about the device:
+```json
+{"id":"11:22:33:44:55:66","mac_type":0,"adv_type":0,"name":"Qingping Motion & Light","rssi":-93,"servicedata":"88121122334455660201520f0126090403000000","servicedatauuid":"0xfdcd","brand":"Qingping","model":"Motion & Light","model_id":"CGPR1","lux":3,"batt":82}
+```
+
+To stop publishing advertisement data:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"pubadvdata":false}'`
+
+::: warning Note
+All product and company names are trademarks or registered trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them.
+:::
+
+::: warning
+We strongly encourage the use of a white-list (see below) so as to collect data from your devices only and not from other MAC addresses.
+By default the gateway scans the advertizing BLE devices nearby with their MAC addresses. Depending on your country, it may be illegal to monitor networks for MAC addresses, especially on networks that you do not own. Please check your country's laws (for US Section 18 U.S. Code § 2511) - [discussion here](https://github.com/schollz/howmanypeoplearearound/issues/4).
+:::

@@ -11,10 +11,19 @@ On M5Stack boards you may do a long press to these buttons in low power mode 0 (
 * Button C on M5Stack (GPIO 37)
 * Button lateral on M5stick (GPIO 35)
 
-You can also do a long press when powering the board so as to reset it.
+You can also do a long press when powering the board to reset it, this press must be done during the first 5 seconds after the start.
+
+### Wifi interference on ESP32 ###
+Certain sensors like HC-SR501 is prone to generate false signals / triggers when used on a ESP32 with Wifi enabled. To reduce or elimate the effect the board must be put into Wifi B/G with lower TX power.
+
+This can be achieved with the following macro, `WifiGMode` defined true and `WifiPower` to e.g. WIFI_POWER_11dBm.  
+
+Since the WiFi protocol is persisted in the flash of the ESP32 you have to run at least once with `WiFiGMode` defined **false** to get Band N back.
 
 ### Low power mode for ESP32
-OpenMQTTGateway support a low power mode for ESP32, this mode can be set by MQTT:
+OpenMQTTGateway support a low power mode for ESP32, this mode is available per default on boards with batteries. The other boards needs to have the macro `DEFAULT_LOW_POWER_MODE` defined at 0, 1 or 2 to use it. More information about the modes is available into User_config.h.
+
+When available this mode can be set by MQTT:
 
 * Normal mode (per default)
 
@@ -24,9 +33,11 @@ OpenMQTTGateway support a low power mode for ESP32, this mode can be set by MQTT
 
 `mosquitto_pub -t "home/OpenMQTTGateway/commands/MQTTtoBT/config" -m '{"lowpowermode":2}'`
 
+The interval between the ESP32 wake up is defined at build time by the macro `TimeBtwRead`, a change of the `interval` through MQTT will not impact the time between wake up.
+
 ::: tip
 When coming back from mode 2 to mode 0 you may publish the command with a retain flag so as to enable the gateway to retrieve it when reconnecting.
-A low power mode switch is automatically created by discovery with Home Assistant, you may experience a delay between the command and the state update due to the fact that the update is published every 2 minutes.
+A low power mode switch is automatically created by discovery with Home Assistant, you may experience a delay between the command and the state update due to the fact that the update will be revceived and acknowledged when the device woke up.
 In low power mode you should use ESPWifiManualSetup so as to rely on the credentials entered into User_config.h.
 So as to do that uncomment the line below in User_config.h
 ``` c
@@ -81,46 +92,19 @@ OpenMQTTGateway support a low power mode for ESP32, this mode can be set by MQTT
 The low power mode can be changed also with a push to button B when the board is processing (top button on M5stickC, M5stickC Plus and middle button of M5stack).
 If you are already in low power mode 1 or 2 with M5Stack you can wake up the board by pressing the red button.
 
-## SSD1306 Display boards ( Heltec SX127X 433Mhz boards and LILYGO® LoRa32 V2.1_1.6.1 433 Mhz )
+### Low power mode (deepSleep) for ESP8266 boards
+In certain use cases where power is severly limited you can use the ESP8266 deep sleep capability.
 
-Several options are available for the display of information on the SSD1306 Display.  These options include display of the OMG logo and setup messages, redirecting of the log output to the display, and display of various module messages on the display.  These options are exclusive to each other, and when a different option is enabled, the current option is disabled.
+* e.g. measuring a pool temperature every 5 minutes using an ESP8266 and DS18B20 probe where the ESP8266 is powered by very limited battery backed solar power.
 
-### Setting the log output
+During deep sleep everything is off and (almost) all execution state is lost. 
 
-The display of serial log messages to the display can be enabled via compiler directive `-DLOG_TO_LCD=true` or via MQTT commands.
+Consumption is about 20 µA.
 
-For example if you want to set the serial log to LCD
+Use this when you want the device to sleep for minutes or hours.
 
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoSSD1306 -m '{"log-lcd":true}'`
+You only have to define the macro `ESP8266_DEEP_SLEEP_IN_US` with the number of microseconds.
 
-you can also revert it back to the serial monitor:
+A hardware jumper is required connecting RST to a GPIO (not to CH_PD) defined by the macro `ESP8266_DEEP_SLEEP_WAKE_PIN` and defaulted to D0.
 
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoSSD1306 -m '{"log-lcd":false}'`
-
-The log level of the messages displayed is Errors and Warnings, and this can only be changed via the compiler directive `-DLOG_LEVEL_LCD=LOG_LEVEL_NOTICE`.  
-
-### Displaying Module json messages ( default )
-
-The display of messages from various modules is also supported.  Currently supported modules include `ZgatewayRTL_433` and `ZsensorBME280`.
-
-This can be enabled with the compiler directive `-DJSON_TO_LCD=true`.
-
-You can also change it by MQTT. For example if you want to display module json messages:
-
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoSSD1306 -m '{"json-lcd":true}'`
-
-And to disable the display of module json messages:
-
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoSSD1306 -m '{"display-json":false}'`
-
-### Units for display, Metric or Imperial
-
-By default the display uses metric units, and this can be changed either by compiler directive or mqtt command.
-
-The compiler directive is `-DDISPLAY_METRIC=true`
-
-The mqtt command to change the units is:
-
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoSSD1306 -m '{"display-metric":false}'`
-
-Please note that it may take several seconds/display updates for the units to change.  This is due to the queueing of messages for display.
+And the sensor code must set variable `ready_to_sleep` to true after publishing the measurement to MQTT and the main loop will then enter deep sleep.

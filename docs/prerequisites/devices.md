@@ -24,10 +24,11 @@ Added to that it retrieves the measures from the devices below. By default the d
 | ATorch Battery Capacity Monitor (c)|DT24|voltage/amp/watt|
 | BLE watches with fixed MAC||rssi for presence detection|
 | BLE beacons keychains||rssi for presence detection|
+| BlueCharm|BC08|acceleration x/y/z-axis/voltage/temperature|
 | BlueMaestro|TempoDisc 1 in 1|temperature/battery|
 | BlueMaestro|TempoDisc 3 in 1|temperature/humidity/dew point/battery|
 | BlueMaestro|TempoDisc 4 in 1|temperature/humidity/pressure/battery|
-| BM2 Battery Monitor|BM2|battery|
+| BM2 Battery Monitor|BM2|battery/volt(c)|
 | ClearGrass|CGG1|temperature/humidity/battery/voltage (depending on which CGG1 firmware is installed)|
 | ClearGrass alarm clock|CGD1|temperature/humidity/battery|
 | ClearGrass alarm clock|CGC1|temperature/humidity/battery|
@@ -45,6 +46,7 @@ Added to that it retrieves the measures from the devices below. By default the d
 | HONEYWELL|JQJCY01YM|formaldehyde/temperature/humidity/battery|
 | Hydractiva Digital | Amphiro/Oras|sessions/time/litres/temperature/energy|
 | iBeacon|protocol|uuid/mfid/major/minor/txpower @ 1 m/voltage|
+| Jaalee|JHT F525|temperature/humidity/battery|
 | INKBIRD|IBS-TH1|temperature/humidity/battery|
 | INKBIRD|IBS-TH2/P01B|temperature/battery|
 | INKBIRD|IBT-2X|temperature1/temperature2|
@@ -57,6 +59,7 @@ Added to that it retrieves the measures from the devices below. By default the d
 | Mokosmart|H4|temperature/humidity/voltage|
 | Mopeka|Pro|temperature/level/sync status/voltage/battery/reading quality|
 | Otio/BeeWi|Door & Window Sensor|contact/battery|
+| Polar|H10 Chest strap|activity heart rate|
 | Qingping|CGDK2|temperature/humidity|
 | Qingping|CGH1|open|
 | Qingping|CGPR1|presence/luminance/battery|
@@ -70,7 +73,7 @@ Added to that it retrieves the measures from the devices below. By default the d
 | Sensirion|SHT4X TH sensor|temperature/humidity|
 | Switchbot|Bot (c)|mode/state/battery|
 | Switchbot|Motion Sensor|movement/light level/sensing distance/led/scope tested/battery|
-| Switchbot|Contact Sensor|contact/movement/scope tested/light level/battery|
+| Switchbot|Contact Sensor|contact/movement/scope tested/light level/in count/out count/push count/battery|
 | Switchbot|Curtain|motion state/position/light level/battery/calibration state|
 | Switchbot|Meter (Plus)|temperature/humidity/battery|
 | Thermobeacon|WS02|temperature/humidity/voltage/timestamp/maximum temperature/maximum temperature timestamp/minimum temperature/minimum temperature timestamp|
@@ -81,7 +84,7 @@ Added to that it retrieves the measures from the devices below. By default the d
 | ThermoPro|TP393|temperature/humidity|
 | TPMS|TPMS|temperature/pressure/battery/alarm/count|
 | Vegtrug||temperature/moisture/luminance/fertility|
-| XIAOMI Mi Flora|HHCCJCY01HHCC|temperature/moisture/luminance/fertility/battery(1)(c)|
+| XIAOMI Mi Flora|HHCCJCY01HHCC|temperature/moisture/luminance/fertility/battery(c) firmware >3.1.8|
 | XIAOMI Ropot|HHCCPOT002|temperature/moisture/fertility|
 | XIAOMI Mi Jia|LYWSDCGO|temperature/humidity/battery|
 | XIAOMI Mi Jia|LYWSD02|temperature/humidity/battery|
